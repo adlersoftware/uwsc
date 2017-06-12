@@ -1,0 +1,65 @@
+// -----------------------------------------------------------------------------
+// Script Name:str
+// Description:
+// -----------------------------------------------------------------------------
+
+if GET_UWSC_NAME = "str.uws" then
+	hoge="abc<hoge>def:piyo:foo"
+	with str
+		print .copyleft(hoge, ":")
+		print .copyright(hoge, ":")
+		print .copyleft(hoge, ":", -1)
+		print .copyright(hoge, ":", 1)
+		print .copy2str(hoge, "<", ">")
+		print .copy2pos(hoge, 3, 6)
+	endwith
+endif
+
+
+
+module str
+
+// --- 文字列の先頭からキーワード間の文字列を抜き出して返す
+// str:元の文字列
+// key:抜き出したい文字列の終端キーワード
+// key_no:何個目のキーワードかを指定
+function copyleft(str, key, key_no=1)
+	result = ""
+	key_pos = pos(key, str, key_no)
+	if key_pos > 0 then result = copy(str, 1, key_pos - 1)
+fend
+
+// --- キーワードから文字列の終端の間の文字列を抜き出して返す
+// str:元の文字列
+// key:抜き出したい文字列の開始キーワード
+// key_no:何個目のキーワードかを指定
+function copyright(str, key, key_no=-1)
+	result = ""
+	key_pos = pos(key, str, key_no)
+	if key_pos > 0 then result = copy(str, key_pos + 1, length(str) - key_pos)
+fend
+
+// --- 2つの文字列の間にある文字列を取得
+// str:元の文字列
+// s1:開始文字列
+// s2:終端文字列
+// s1_no:何個目の開始文字列かを指定
+// s2_no:何個目の終端文字列かを指定
+function copy2str(str, s1, s2, s1_no=1, s2_no=1)
+	result = ""
+	pos1 = pos(s1, str, s1_no)
+	pos2 = pos(s2, str, s2_no)
+	if pos1 > 0 and pos2 > 0 then
+		if pos1 < pos2 then result = copy2pos(str, pos1, pos2)
+	endif
+fend
+
+// --- 2つの位置の間にある文字列を取得
+// str:元の文字列
+// pos1:開始位置
+// pos2:終端位置
+function copy2pos(str, pos1, pos2)
+	result = copy(str, pos1 + 1, pos2 - pos1 - 1)
+fend
+
+endmodule

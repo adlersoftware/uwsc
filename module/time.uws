@@ -1,0 +1,128 @@
+// Name:time
+// Description:
+//
+
+
+
+if GET_UWSC_NAME = "time.uws" then
+	with util
+		print .GetWeekStr(.WEEK_MON)
+		print .GetDateStr()
+		print .GetDateStr_S()
+		print .GetDateStr_S0()
+		print .GetTimeStr()
+		print .GetTimeStr_C0()
+		print .GetDateTimeStr_0()
+		print .GetDateTimeStr_SC0()
+	endwith
+endif
+
+
+
+module time
+
+const WEEK_SUN				= 0
+const WEEK_MON				= 1
+const WEEK_TUE				= 2
+const WEEK_WED				= 3
+const WEEK_THU				= 4
+const WEEK_FRI				= 5
+const WEEK_SAT				= 6
+const WEEK_SHORT			= 0
+const WEEK_ENGLISH			= 1
+const WEEK_JAPAN			= 2
+
+
+// --- 曜日を文字列に変換
+// week: g_gettime_weekで取得できる値
+// notation: WEEK_SHORT="Sun", WEEK_ENGLISH="Sunday", WEEK_JAPAN="日"
+function GetWeekStr(week, notation=WEEK_JAPAN)
+	if week < WEEK_SUN or week > WEEK_SAT then week = WEEK_SUN
+	if notation < WEEK_SHORT or notation > WEEK_JAPAN then week = WEEK_JAPAN
+	
+	dim week_str[2][6] = "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", _
+			"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", _
+			"日", "月", "火", "水", "木", "金", "土"
+	result = week_str[notation][week]
+fend
+
+// --- 日付フォーマット 基本型
+// 例：20170607
+function GetDateStr()
+	gettime()
+	result = g_time_yy4 + g_time_mm2 + g_time_dd2
+fend
+
+// --- 日付フォーマット スラッシュ区切り
+// 例：2017/6/7
+function GetDateStr_S()
+	gettime()
+	result = g_time_yy + "/" + g_time_mm + "/" + g_time_dd
+fend
+
+// --- 日付フォーマット スラッシュ区切り0パディング
+// 例：2017/06/07
+function GetDateStr_S0()
+	gettime()
+	result = g_time_yy4 + "/" + g_time_mm2 + "/" + g_time_dd2
+fend
+
+// --- 時刻フォーマット
+// 例：130901
+function GetTimeStr()
+	gettime()
+	result = g_time_hh2 + g_time_nn2 + g_time_ss2
+fend
+
+// --- 時刻フォーマット コロン区切り0パディング
+// 例：13:09:01
+function GetTimeStr_C0()
+	gettime()
+	result = g_time_hh2 + ":" + g_time_nn2 + ":" + g_time_ss2
+fend
+
+// --- 日時フォーマット 0パディング
+// 例：2017:06:09 13:09:01
+function GetDateTimeStr_0()
+	gettime()
+	result = g_time_yy4 + g_time_mm2 + g_time_dd2 + g_time_hh2 + g_time_nn2 + g_time_ss2
+fend
+
+// --- 日時フォーマット スラッシュコロン区切り0パディング
+// 例：2017:06:09 13:09:01
+function GetDateTimeStr_SC0()
+	gettime()
+	result = g_time_yy4 + "/" + g_time_mm2 + "/" + g_time_dd2 + " " + _
+			g_time_hh2 + ":" + g_time_nn2 + ":" + g_time_ss2
+fend
+
+// --- 指定した時刻を本日として取得
+// target_timeはHH:NN:SSを想定
+function GetTodayTime(target_time)
+	result = gettime(0, GetDateStr_S0() + " " + target_time)
+fend
+
+// --- 現在時刻が指定時間の範囲内にあるかどうか
+// 範囲内であればtrue,そうでなければfalseを返す
+function IsInTimeRange(start_time, end_time)
+	current_datetime = gettime()
+	start_datetime = GetTodayTime(start_time)
+	end_datetime = GetTodayTime(end_time)
+	result = (current_datetime >= start_datetime and current_datetime <= end_datetime)
+fend
+
+// --- 指定時刻までの秒数を取得
+// target_time:コロン区切り0パディングの時間文字列
+// target_timeが現在時刻以降なら当日として計算し、
+// それより前ならば翌日の同時刻として計算する
+function GetDiffTime(target_time)
+	current_datetime = gettime()
+	target_datetime = GetTodayTime(target_time)
+	if target_datetime >= current_datetime then
+		result = target_datetime - current_datetime
+	else
+		result = gettime(1, GetDateStr_S0() + " " + target_time) - current_datetime
+	endif
+fend
+
+endmodule

@@ -1,0 +1,40 @@
+
+module adodb
+
+const TBL_TOUHYO_RIREKI = "IPAT_TOHYO_RIREKI"
+dim connection
+dim recordset
+
+procedure CreateObject(path)
+	path_ex = doscmd("echo " + path)
+	connection = CreateOLEObj("ADODB.Connection")
+	connection.open("Provider=Microsoft.ACE.OLEDB.12.0;Data Source="+path_ex+";")
+	recordset = CreateOLEObj("ADODB.Recordset")
+fend
+
+function GetHaraimodoshi(year, monthday, course, race)
+	sql = "select JyoCD,RaceNum,HAITOU_KINGAKU from " + TBL_TOUHYO_RIREKI + _
+			" where Year='" + year + "' and MonthDay='" + monthday + "' and " + _
+			"JyoCD='" + course + "' and RaceNum='" + race + "';"
+	print sql
+	recordset.open(sql, connection)
+	result = 0
+	while !recordset.EOF
+		course = recordset.Fields.Item("JyoCD").value
+		race = recordset.Fields.Item("RaceNum").value
+		haitou = recordset.Fields.Item("HAITOU_KINGAKU").value
+		if haitou = NULL then haitou = 0
+		result=haitou
+		recordset.MoveNext
+	wend
+	recordset.close()
+fend
+
+procedure Destroy()
+	connection.close()
+	recordset = nothing
+	db_cat = nothing
+	connection = nothing
+fend
+
+endmodule

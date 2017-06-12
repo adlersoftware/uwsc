@@ -1,0 +1,128 @@
+
+module arraylist
+
+
+// --- レコード番号をチェック
+function ChkRecordNum(record, a[][])
+	result = (record >= 0 or record <= length(a)-1)
+fend
+
+// --- カラム番号をチェック
+function ChkColumnNum(column, a[][])
+	result = (column >= 0 or column <= length(a[0])-1)
+fend
+
+// --- 指定位置に値を格納
+function GetValue(record, column, a[][])
+	if ChkRecordNum(record, a) and ChkColumnNum(column, a) then
+		result = a[record][column]
+	else
+		result = ""
+	endif
+fend
+
+// --- 指定位置の値を取得
+procedure SetValue(record, column, value, var a[][])
+	if ChkRecordNum(record, a) and ChkColumnNum(column, a) then
+		a[record][column] = value
+	endif
+fend
+
+// --- 指定位置のレコードに値を格納
+procedure SetRecord(record_num, record[], var a[][])
+	if !ChkRecordNum(record_num, a) then exit
+
+	if length(record) < length(a[0]) then
+		loop_cnt = length(record[0]) - 1
+	else
+		loop_cnt = length(a[0]) - 1
+	endif
+	for i = 0 to loop_cnt
+		a[record_num][i] = record[i]
+	next
+fend
+
+// --- 任意の値が入ったレコードを最後に追加
+procedure AddRecord(record[], var a[][])
+	resize(a, length(a))
+	SetRecord(length(a)-1, record, a)
+fend
+
+// --- 指定位置の前にレコードを挿入
+procedure InsRecord(record_num, record[], var a[][])
+	if !ChkRecordNum(record_num, a) then exit
+	
+	resize(a, length(a))
+	for i = length(a) - 1 to record_num + 1 step -1
+		for j = 0 to length(a[0]) - 1
+			a[i][j] = a[i-1][j]
+		next
+	next
+	SetRecord(record_num, record, a)
+fend
+
+// --- 指定位置のレコードを削除
+procedure DelRecord(record_num, var a[][])
+	if !ChkRecordNum(record_num, a) then exit
+	
+	for i = record_num + 1 to length(a) - 1
+		for j = 0 to length(a[0]) - 1
+			a[i-1][j] = a[i][j]
+		next
+	next
+	resize(a, length(a)-2)
+fend
+
+// --- 指定した２つのレコードを交換
+procedure SwapRecord(record_num1, record_num2, var a[][])
+	if !ChkRecordNum(record_num1, a) or !ChkRecordNum(record_num2, a) then exit
+
+	dim tmp_rec = slice(a[0])
+	SetRecord(record_num1, a[record_num2], a)
+	SetRecord(record_num2, tmp_rec, a)
+fend
+
+// --- レコード番号を取得
+// 指定したカラムで検索し、値が格納されているレコード番号を返す
+// 見つからないなら-1を返す
+function GetRecordNum(column_num, value, a[][])
+	result = -1
+	if !ChkColumnNum(column_num, a) then exit
+
+	for i = 0 to length(a) - 1
+		if a[i][column_num] = value then
+			result = i
+			break
+		endif
+	next
+fend
+
+// --- すべての値を出力
+procedure PrintAll(a[][])
+	print "行数:" + length(a) + ",列数:" + length(a[0])
+	for i = 0 to length(a) - 1
+		print join(a[i], "<#TAB>| ")
+	next
+fend
+
+// --- CSVファイルへ保存
+// path:CSVファイルのパス
+// a[record][column]
+// head:先頭行をヘッダとするか
+procedure SaveCSV(a[][], path="save.csv", head=true)
+	print "　記録先:" + path
+	if fopen(path, F_EXISTS) and head then
+		start = 1
+	else
+		start = 0
+	endif
+	print "　記録中です..."
+	file_id = fopen(path, F_READ or F_WRITE)
+	for i = start to length(a) - 1
+		fput(file_id, join(a[i], ","))
+	next
+	fclose(file_id)
+	print "　CSVファイルへ記録しました"
+fend
+
+endmodule

@@ -1,0 +1,19 @@
+// -----------------------------------------------------------------------------
+// Script Name:abc
+// Description:
+// -----------------------------------------------------------------------------
+
+if GET_UWSC_NAME = "abc.uws" then
+	with abc
+		.MyProcedure()
+	endwith
+endif
+
+module abc
+
+procedure MyProcedure()
+	=
+	print "Write your processes."
+fend
+
+endmodule

@@ -1,0 +1,53 @@
+module xml
+
+dim objDOM
+
+procedure CreateObject(xml_path)
+	objDOM = CreateOLEObj("MSXML2.DOMDocument.6.0")
+	// load関数で環境変数を変換してくれないため
+	cnf_path = doscmd("echo " + xml_path)
+	print "　XMLファイルの読込:" + cnf_path
+	objDOM.load(cnf_path)
+	if objDOM.parseError.errorCode <> 0 then
+		myErr = objDOM.parseError
+		print "　XMLオブジェクトの作成に失敗しました"
+		print "　" + myErr.reason
+		DestroyObject()
+	endif
+fend
+
+procedure DestroyObject()
+	objDOM = nothing
+fend
+
+// --- 指定した属性の値を返す
+// XPathでエレメントのパスを指定し、
+// attribute_nameで属性の名前を指定してください
+function GetValue(xpath, attribute_name)
+	voteElement = objDOM.selectSingleNode(xpath)
+	valueAttribute = voteElement.attributes.getNamedItem(attribute_name)
+	result = valueAttribute.value
+fend
+
+// --- テキストノードのみ列挙する
+procedure EnumTextNodes()
+	if objDOM = nothing then
+		print "　XMLオブジェクトを未作成の状態で操作しようとしました"
+		exitexit
+	endif
+	EnumTextNodes2(objDOM.childNodes)
+fend
+
+procedure EnumTextNodes2(objNode)
+	for i = 0 to objNode.length - 1
+		objItem = objNode.item(i)
+		if objItem.nodeType = 3 then
+			print objItem.parentNode.nodeName + " : " + objItem.nodeValue
+		endif
+		if objItem.hasChildNodes then
+			EnumTextNodes2(objItem.childNodes)
+		endif
+	next
+fend
+
+endmodule

@@ -1,0 +1,86 @@
+
+if GET_UWSC_NAME = "ini.uws" then
+	with ini
+		.ChangeSection("INFO1")
+		.SetValue("user_name", "kayanon")
+		.SetValue("password", 9876)
+		.SetFileName("savedata.ini")
+		if .ExistsFile() then
+			.Read("user_name")
+			.Read("password")
+		else
+			.Write("user_name")
+			.Write("password")
+		endif
+		print .GetValue("user_name")
+		print .GetValue("password")
+
+		.Write("password", 5432)
+		print .GetValue("password")
+	endwith
+endif
+
+
+
+module ini
+
+// work_dataを通してiniファイルとデータを読み書きします
+// 必ず最初にSetValue()で初期値を格納する必要があります
+// GetValue(), SetValue(), Read(), Write()はセクションの影響を受けます
+// 複数のセクションを使い分ける場合は、事前にChangeSection()で切り替えてください
+dim f_name = "setting.ini"
+dim work_section = "SECTION1"
+hashtbl work_data
+
+// --- iniファイル名を設定
+procedure SetFileName(new_filename)
+	if new_filename <> "" then
+		f_name = new_filename
+	endif
+fend
+
+// --- 設定ファイルが存在するか
+function ExistsFile()
+	result = fopen(f_name, F_EXISTS)
+fend
+
+// --- 作業セクションを切り替え
+procedure ChangeSection(new_section)
+	work_section = new_section
+fend
+
+function GetValue(key, section=work_section)
+	result = work_data[section+key]
+fend
+
+procedure SetValue(key, value, section=work_section)
+	work_data[section+key] = value
+fend
+
+// --- iniファイルから型変換して読み込み
+procedure Read(key)
+	try
+		value = vartype(readini(work_section, key, f_name), vartype(GetValue(key)))
+		SetValue(key, value)
+	except
+	endtry
+fend
+
+// --- work_dataでiniファイルを更新
+// value:書き込む値
+// 指定するとwork_dataとiniファイルへ値を書き込みます
+// 省略するとwork_dataの値をiniファイルへ書き込みます
+// section:書き込むセクション
+// 指定すると、一時的にセクションを変えます
+// 省略すると、work_sectionを使用します
+procedure Write(key, value=NULL, section=NULL)
+	if section = NULL then section = work_section
+	if value = NULL then
+		value = GetValue(key, section)
+	else
+		SetValue(key, value, section)
+	endif
+	writeini(section, key, vartype(value, VAR_USTR), f_name)
+fend
+
+endmodule

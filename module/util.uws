@@ -1,0 +1,166 @@
+
+if GET_UWSC_NAME = "util.uws" then
+	with util
+		print .GetValueFromTag("    <abc>Who am I.</abc>")
+	endwith
+endif
+
+
+
+module util
+
+const CLS_DIALOG			= "#32770"
+
+
+// --- タグ文字列から値を取り出す
+// line:タグが含まれた文字列を指定（開始タグと終了タグが一つずつの場合のみ）
+function GetValueFromTag(line)
+	start = pos(">", line, 1) + 1
+	end = pos("<", line, -1) - start
+	result = copy(line, start, end)
+fend
+
+// --- パスワードとシード値を指定して暗号化
+// パスワードとシード値は任意の文字列を指定する
+// シード値はパスワードよりも十分に長いものを使用してください
+// 戻り値は暗号化されたパスワードが返る
+// 16進数で表され、半角スペースで区切られる
+function EncodePass(pass, seed)
+	enc = ""
+	for i = 1 to length(pass)
+		a = asc(pass)
+		b = asc(seed)
+		c = a xor b
+		pass = copy(pass, 2)
+		seed = copy(seed, 2)
+		enc = enc + " " + format(c, 1, -1)
+	next
+	result = trim(enc)
+fend
+
+// --- 暗号化パスワードとシード値を指定して復号化
+// 暗号化パスワードはEncodePassで返されたものを、
+// シード値はEncodePassで使用したものを使ってください
+// 戻り値は復号化されたパスワードが返る
+function DecodePass(enc, seed)
+	hex = split(enc, " ")
+	dec = ""
+	for i = 0 to length(hex)-1
+		d = val("$" + hex[i])
+		b = asc(seed)
+		c = d xor b
+		seed = copy(seed, 2)
+		dec = dec + chr(c)
+	next
+	result = dec
+fend
+
+// --- CSVに配列データ書き込み
+// data[]には書き込みたい配列を指定
+procedure WriteCsv(path, data[])
+	line = data[0]
+	for i = 1 to length(data) - 1
+		line = line + "," + data[i]
+	next
+	file_id = fopen(path, F_READ or F_WRITE)
+	fput(file_id, line)
+	fclose(file_id)
+	print "　WRITE:" + line
+fend
+
+// --- ウィンドウが安定して表示されるまで待機
+// 時間までにウィンドウが表示されたらtrue、表示されなければfalseを返す
+function WaitForVisibleWindow(window_id, wait=60)
+	last_time = GETTIME()
+	
+	print "　" + status(window_id, ST_TITLE) + "ウィンドウが表示されるまで待機しています"
+	while !GETKEYSTATE(VK_ESC)
+		now = GETTIME()
+		if (now - last_time) >= wait then
+			print "　ウィンドウが表示されませんでした"
+			result = false
+			exit
+		endif
+		sleep(0.5)
+		if !status(window_id, ST_VISIBLE) then continue
+		if status(window_id, ST_BUSY) then continue
+		print "　" + status(window_id, ST_TITLE) + "ウィンドウが表示されました"
+		result = true
+		break
+	wend
+fend
+
+// --- クラス名から子ウィンドウのID取得
+// 見つからなければプロセス終了
+// parent_id:親ウィンドウID, child_class:子ウインドウのクラス名
+// number:同じクラスがあった場合に何番目を取得するか　0以下は最後まで
+// result:子ウインドウID
+function GetChildWindowId(parent_id, child_class, number=1)
+	window_id = -1
+	finish = false
+	find_cnt = 0
+	i = 0
+	listsize = getallwin(parent_id)
+	while i < listsize and !finish
+		id = ALL_WIN_ID[i]
+		print "　ChildWindowID"+id+" - "+status(id, ST_TITLE) + ":"+status(id, ST_CLASS)
+		n = pos(child_class, status(id, ST_CLASS))
+		if n >= 1 then
+			window_id = id
+			find_cnt = find_cnt + 1
+		endif
+		if number >= 1 then
+			if find_cnt = number then finish = true
+		endif
+		i = i + 1
+	wend
+	if window_id = -1 then
+		print "　"+status(parent_id, ST_TITLE)+"内に"+child_class+"が見つかりませんでした"
+		exitexit
+	endif
+	result = window_id
+fend
+
+// --- ダイアログのボタンを押す
+// window_name、class_nameのウィンドウが表示されたら、キャプションが
+// button_textになっているボタンをクリックします。
+// クリック（ダイアログが表示）したらtrue、そうでなければfalseを返す
+function ProcDiarog(window_name, class_name=CLS_DIALOG, button_text="OK", wait_time=0)
+	if class_name = "" then
+		window_id = GETID(window_name, , wait_time)
+	else
+		window_id = GETID(window_name, class_name, wait_time)
+	endif
+	if window_id > 0 then
+		print "　ダイアログ表示："+status(window_id, ST_TITLE)
+		for i = 0 to GetItem(window_id, ITM_STATIC, 1) - 1
+		  print "　[" + i + "] " + ALL_ITEM_LIST[i]
+		next
+		CLKITEM(window_id, button_text, CLK_BTN, true)
+		print "　「"+button_text+"」ボタンを選択しました"
+		result = true
+	else
+		result = false
+	endif
+fend
+
+// IEがビジー状態の間待ちます
+procedure ie_wait( ie )
+  repeat
+    sleep( 0.1 )
+  until ( ! ie.busy ) and ( ie.readystate = 4 )
+  
+  sleep( 0.2 )
+fend
+
+// ディスプレイの電源を点灯するため
+procedure LightingDisplay()
+	lockhard(true)
+	// KBD(VK_A, UP)~KBD(VK_Z, UP)が必要？
+	kbd(VK_CTRL)
+	sleep(1)
+	kbd(VK_CTRL)
+	lockhard(false)
+fend
+
+endmodule
