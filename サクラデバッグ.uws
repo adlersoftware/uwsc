@@ -1,0 +1,111 @@
+// 待機中にUWSCのエラーダイアログが出ると、エラーを確認できます。
+// 起動直後なら、UWSCダイアログが出ていない状態でもエラー確認ができます。
+// モジュール内エラーにも対応しています。
+
+call module\str
+
+const CLS_DIALOG		= "#32770"
+const FUKIDASI_X		= 0
+const FUKIDASI_Y		= 60
+
+CheckNow()
+while !getkeystate(VK_ESC)
+	sleep(1)
+	CheckErrDialog()
+wend
+
+
+
+// --- 起動直後のエラー確認
+procedure CheckNow()
+	if !CheckErrDialog() then
+		if slctbox(SLCT_BTN, 0, "今すぐエラーを確認しますか？", "今すぐ確認", "待機") <> SLCT_1 then exit
+		CheckErr()
+	endif
+fend
+
+// --- UWSCのエラーダイアログが出たときのエラー確認
+// エラーダイアログがあればtrue、なければfalseを返す
+function CheckErrDialog()
+	result = false
+	uwsc_err_id = getid("UWSC", "TUmsgDlg_uwsc")
+	if uwsc_err_id < 0 then exit
+	result = true
+	uws_name = chgmoj(status(uwsc_err_id, ST_TITLE), "UWSC - ","")
+	x = status(uwsc_err_id, ST_X)
+	y = status(uwsc_err_id, ST_Y) + status(uwsc_err_id, ST_HEIGHT)
+	if slctbox(SLCT_BTN, 0, x, y, "エラーを確認しますか？", "する", "しない") <> SLCT_1 then
+		clkitem(uwsc_err_id, "OK", CLK_BTN)
+		balloon()
+		exit
+	endif
+	// エラー確認が成功すればOKボタンが押され、
+	// 失敗すれば吹き出しで誘導
+	if CheckErr(uws_name) then
+		clkitem(uwsc_err_id, "OK", CLK_BTN)
+	endif
+fend
+
+// --- サクラエディタでエラー行を確認する
+// 成功すればtrue、失敗すればfalseを返す
+function CheckErr(uws_name="uws")
+	result = false
+	err_msg = ""
+	module_name = ""
+	errLine = GetErrLine(err_msg, module_name)
+	if module_name <> "" then uws_name = module_name
+	editor_id = getid(uws_name, "TextEditorWindow")
+	if editor_id < 0 then
+		fukidasi(uws_name + "を開いてください", FUKIDASI_X, FUKIDASI_Y)
+		exit
+	endif
+	if pos("(更新)", status(editor_id, ST_TITLE)) > 0 then
+		fukidasi("更新されているのでジャンプできません", FUKIDASI_X, FUKIDASI_Y)
+		exit
+	endif
+	fukidasi(err_msg, FUKIDASI_X, FUKIDASI_Y)
+	if errLine > 0 then JumpToErrLine(editor_id, errLine)
+	result = true
+fend
+
+// --- UWSCのログファイルからエラー行を特定
+// err_msg:エラーメッセージが入る
+// module_name:モジュール内エラーの場合、モジュール名が入る
+function GetErrLine(var err_msg, var module_name)
+	result = 0
+	logfile_id = fopen(GET_APPDATA_DIR + "\UWSC\uwsc.log", F_READ)
+	If logfile_id < 0 Then Exit
+
+	last_line = fget(logfile_id, fget(logfile_id, F_LINECOUNT))
+	// 日時が入るなら日時をカット
+	if val(copy(last_line, 1, 1)) <> ERR_VALUE then
+		tmp_str = str.copy2str(last_line, "  ", "行目")
+	else
+		tmp_str = str.copyleft(last_line, "行目")
+	endif
+	errLine = val(str.copyright(tmp_str, " "), 0)
+
+	tmp_str = trim(str.copyleft(tmp_str, " ", -1))
+	if pos(".UWS", tmp_str) > 0 then
+		module_name = str.copy2str(tmp_str, "\", ":", -1, -1)
+		if module_name = "" then module_name = str.copy2str(tmp_str, " ", ":", -1, -1)
+		err_msg = str.copyleft(tmp_str, " ")
+	else
+		err_msg = tmp_str
+	endif
+	fclose(logfile_id)
+	result = errLine
+fend
+
+// --- サクラエディターでエラー行へ飛ぶ
+procedure JumpToErrLine(editor_id, errLine)
+	jump_id = getid("指定行へジャンプ", CLS_DIALOG)
+	if jump_id < 0 then
+		sckey(editor_id, VK_CTRL, VK_J)
+		sleep(0.2)
+		jump_id = getid("指定行へジャンプ", CLS_DIALOG)
+		if jump_id < 0 then exit
+	endif
+	sendstr(jump_id, errLine, 1, TRUE)
+	clkitem(jump_id, "ジャンプ", CLK_BTN)
+fend
