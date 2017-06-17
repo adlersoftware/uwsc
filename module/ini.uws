@@ -3,20 +3,39 @@ if GET_UWSC_NAME = "ini.uws" then
 	with ini
 		.ChangeSection("INFO1")
 		.SetValue("user_name", "kayanon")
-		.SetValue("password", 9876)
+		.SetValue("password", "9876")
+		.ChangeSection("INFO2")
+		.SetValue("user_name", "sumipe")
+		.SetValue("password", "1234")
 		.SetFileName("savedata.ini")
 		if .ExistsFile() then
-			.Read("user_name")
-			.Read("password")
+			.Read("user_name", "INFO1")
+			.Read("password", "INFO1")
+			.Read("user_name", "INFO2")
+			.Read("password", "INFO2")
 		else
+			.ChangeSection("INFO1")
+			.Write("user_name")
+			.Write("password")
+			.ChangeSection("INFO2")
 			.Write("user_name")
 			.Write("password")
 		endif
-		print .GetValue("user_name")
-		print .GetValue("password")
+		print "[INFO1]"
+		print .GetValue("user_name", "INFO1")
+		print .GetValue("password", "INFO1")
+		print "[INFO2]"
+		print .GetValue("user_name", "INFO2")
+		print .GetValue("password", "INFO2")
 
-		.Write("password", 5432)
+		print
+		.ChangeSection("INFO1")
+		.Write("password", "0000")
+		.Write("password", "5432", "INFO2")
+		.Read("password")
 		print .GetValue("password")
+		.Read("password", "INFO2")
+		print .GetValue("password", "INFO2")
 	endwith
 endif
 
@@ -49,32 +68,34 @@ procedure ChangeSection(new_section)
 	work_section = new_section
 fend
 
+// --- work_dataの値を返す
 function GetValue(key, section=work_section)
-	result = work_data[section+key]
+	result = work_data[section+"-"+key]
 fend
 
+// --- work_dataへ値を設定
 procedure SetValue(key, value, section=work_section)
-	work_data[section+key] = value
+	work_data[section+"-"+key] = value
 fend
 
 // --- iniファイルから型変換して読み込み
-procedure Read(key)
+procedure Read(key, section=work_section)
 	try
-		value = vartype(readini(work_section, key, f_name), vartype(GetValue(key)))
-		SetValue(key, value)
+		value = vartype(readini(section, key, f_name), vartype(GetValue(key, section)))
+		SetValue(key, value, section)
 	except
 	endtry
 fend
 
 // --- work_dataでiniファイルを更新
-// value:書き込む値
+// key:書き込みたいキー
+// value:書き込みたい値
 // 指定するとwork_dataとiniファイルへ値を書き込みます
 // 省略するとwork_dataの値をiniファイルへ書き込みます
-// section:書き込むセクション
+// section:書き込みたいセクション
 // 指定すると、一時的にセクションを変えます
 // 省略すると、work_sectionを使用します
-procedure Write(key, value=NULL, section=NULL)
-	if section = NULL then section = work_section
+procedure Write(key, value=NULL, section=work_section)
 	if value = NULL then
 		value = GetValue(key, section)
 	else
